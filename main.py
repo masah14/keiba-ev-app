@@ -2,39 +2,20 @@
 競馬期待値計算アプリ - FastAPI バックエンド
 リアルタイム情報収集 × 改良版期待値エンジン
 """
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import uvicorn
 from pathlib import Path
 from datetime import datetime
 import json
-import secrets
 import os
 
 from scraper import RaceScraper
 from ev_engine import EVEngine
 
 app = FastAPI(title="競馬期待値計算アプリ")
-security = HTTPBasic()
-
-# 認証情報（環境変数から取得、デフォルト値あり）
-AUTH_USERNAME = os.environ.get("AUTH_USERNAME", "masashi")
-AUTH_PASSWORD = os.environ.get("AUTH_PASSWORD", "keiba2025")
-
-def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
-    """Basic認証を検証"""
-    correct_username = secrets.compare_digest(credentials.username, AUTH_USERNAME)
-    correct_password = secrets.compare_digest(credentials.password, AUTH_PASSWORD)
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
 
 # CORS設定
 app.add_middleware(
@@ -88,8 +69,8 @@ def apply_improved_factors(horses, course_name="", distance=0):
 
 
 @app.get("/")
-async def root(username: str = Depends(verify_credentials)):
-    """メインページ（認証必須）"""
+async def root():
+    """メインページ"""
     html_path = Path(__file__).parent / "index.html"
     if html_path.exists():
         return HTMLResponse(content=html_path.read_text(encoding='utf-8'))
@@ -135,7 +116,7 @@ async def get_icon():
 
 
 @app.get("/api/races")
-async def get_races(username: str = Depends(verify_credentials)):
+async def get_races():
     """今日のレース一覧を取得（リアルタイム）"""
     try:
         races = scraper.get_today_races()
@@ -161,7 +142,7 @@ async def get_races(username: str = Depends(verify_credentials)):
 
 
 @app.get("/api/race/{race_id}")
-async def get_race_details(race_id: str, username: str = Depends(verify_credentials)):
+async def get_race_details(race_id: str):
     """レース詳細を取得"""
     details = scraper.get_race_details(race_id)
     if not details:
@@ -170,7 +151,7 @@ async def get_race_details(race_id: str, username: str = Depends(verify_credenti
 
 
 @app.get("/api/ev/{race_id}")
-async def calculate_ev(race_id: str, min_ev: float = 1.0, bankroll: float = 100000, username: str = Depends(verify_credentials)):
+async def calculate_ev(race_id: str, min_ev: float = 1.0, bankroll: float = 100000):
     """期待値を計算（改良版エンジン）"""
     # レース詳細を取得
     details = scraper.get_race_details(race_id)
@@ -228,7 +209,7 @@ async def calculate_ev(race_id: str, min_ev: float = 1.0, bankroll: float = 1000
 
 
 @app.get("/api/recommend")
-async def get_all_recommendations(min_ev: float = 1.0, bankroll: float = 100000, username: str = Depends(verify_credentials)):
+async def get_all_recommendations(min_ev: float = 1.0, bankroll: float = 100000):
     """全レースの推奨馬券を取得"""
     all_recommendations = []
     
