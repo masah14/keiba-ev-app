@@ -102,11 +102,16 @@ async def get_service_worker():
     return Response(content="", media_type="application/javascript")
 
 
+@app.get("/icon.png")
 @app.get("/icon-192.png")
 @app.get("/icon-512.png")
 async def get_icon():
-    """アプリアイコン（SVGをPNG代わりに使用）"""
-    # シンプルなSVGアイコンを返す
+    """アプリアイコン"""
+    icon_path = Path(__file__).parent / "icon.png"
+    if icon_path.exists():
+        from fastapi.responses import FileResponse
+        return FileResponse(icon_path, media_type="image/png")
+    # フォールバック: シンプルなSVGアイコン
     svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
         <rect width="100" height="100" rx="20" fill="#6366f1"/>
         <text x="50" y="65" font-size="50" text-anchor="middle" fill="white">🏇</text>
